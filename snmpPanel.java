@@ -14,30 +14,17 @@ import org.snmp4j.smi.*;
 import org.snmp4j.Snmp;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 
-public class snmpPanel extends JFrame {
-	// Objects for the GUI
-	private ActionListener listener;
-	private JLabel oidLabel;
-	private JTextField oidText;
-	private JButton setButt;
-	private JButton getButt;
-	private JTextArea ackArea;
-	private JPanel controlPanel;
-
+public class snmpPanel {
 	// Variables for the SNMP	
 	public static final String READ_COMMUNITY = "public";
 	public static final String WRITE_COMMUNITY = "private";
 	public static final int mSNMPVersion = 0;
 	public static final String OID_UPS_OUTLET_GROUP1 = "1.3.6.1.4.1.318.1.1.1.12.3.2.1.3.1";
 	public static final String OID_UPS_BATTERY_CAPACITY = "1.3.6.1.4.1.318.1.1.1.2.2.1.0";
-
-	public snmpPanel() {
-		// Implementing a listener to be used for the ActionListener
-		listener = new ChoiceListener();
-		createControlPanel();
-	}
-
+   
 	public static void main(String[] args) {
+		controlPanel();
+      
 		try {
 			String strIPAddress = "172.20.1.150";
 			snmpPanel objSNMP = new snmpPanel();
@@ -133,41 +120,84 @@ public class snmpPanel extends JFrame {
 	    return "Response: " + str;
 	}
 	
-	// Making the buttons do some stuff
-	class ChoiceListener implements ActionListener {
-		public void actionPerformed(ActionEvent event) {
-			if(event.getSource() == setButt) {
-				// Writing
-				ackArea.setText("setButt pressed");
-			} else if(event.getSource() == getButt) {
-				// Reading
-				ackArea.setText("getButt pressed");
+	public static void controlPanel() {
+		JFrame frame = new JFrame();
+		frame.setSize(750, 500);
+		frame.setTitle("SNMP Boi");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+     
+		frame.setLayout(new BorderLayout());
+		JLabel panel = new JLabel(new ImageIcon("D:\\Student Data\\Pictures\\Saved Pictures\\child.jpg"));
+
+      	// IP Text Field
+		JTextField ipTF = new JTextField();
+		ipTF.setBounds(30, 10, 190, 25);
+
+		// IP Label
+		JLabel ipLabel = new JLabel();
+		ipLabel.setText("IP: ");
+		ipLabel.setLocation(10, 0);
+		ipLabel.setSize(50, 50);
+        
+		// IP Text Area
+		JTextArea ipTA = new JTextArea();
+		ipTA.setBounds(430, 10, 300, 450);
+		ipTA.setEditable(false);
+
+		// write Button
+		JButton writeButt = new JButton();
+		writeButt.setText("Write info");
+		writeButt.setBounds(10, 40, 100, 50);
+        writeButt.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent event) {
+            	System.out.println(event.getActionCommand());
+				ipTA.append(event.getActionCommand() + '\n');
+         	}
+        });
+
+		// read Button
+		JButton readButt = new JButton();
+		readButt.setText("Read info");
+		readButt.setBounds(120, 40, 100, 50);
+		readButt.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				System.out.println(event.getActionCommand());
+				ipTA.append(event.getActionCommand() + '\n');
 			}
-		}
-	}
+		});
+ 
+		// Close button
+		JButton close = new JButton();
+		close.setText("Exit");
+		close.setBounds(10, 410, 100, 50);
+		close.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent event) {
+            	System.exit(0);
+         	}
+      	});
 
-	// Setting up the frame for snmpPanel
-	public void createControlPanel() {
-		// Creating the buttons
-		setButt = new JButton("setButt");
-		getButt = new JButton("getButt");
-		setButt.addActionListener(listener);		
-		getButt.addActionListener(listener);
+		// Set SNMP Radio
+		JRadioButton writeRadio = new JRadioButton("Write", true);
+		writeRadio.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				System.out.print(event.getActionCommand());
+			}
+		});
 
-		// Creating the text fields
-		ackArea = new JTextArea(100, 20);
-		ackArea.setEditable(false);
+		ButtonGroup group = new ButtonGroup();
+		group.add(writeRadio);
 
-		// Creating the text area
-   		oidLabel = new JLabel("oidLable");
-		oidText = new JTextField("oidText");
+		//JPanel panel = new JPanel();
+		panel.setLayout(null);
+		panel.add(ipTF);
+		panel.add(ipLabel);
+		panel.add(writeButt);
+		panel.add(readButt);
+		panel.add(close);
+		panel.add(ipTA);
 
-		// Adding all the objects to the panel
-		JPanel panel = new JPanel();
-		panel.add(setButt);
-		panel.add(getButt);
-		panel.add(ackArea);
-		panel.add(oidLabel);
-		panel.add(oidText);
-	}
+		frame.add(panel);
+		frame.setResizable(false);
+		frame.setVisible(true);
+   }
 }
