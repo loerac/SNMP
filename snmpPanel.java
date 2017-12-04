@@ -24,7 +24,6 @@ public class snmpPanel {
    
 	public static void main(String[] args) {
 		controlPanel();
-      
 		try {
 			String strIPAddress = "172.20.1.150";
 			snmpPanel objSNMP = new snmpPanel();
@@ -129,7 +128,7 @@ public class snmpPanel {
 		frame.setLayout(new BorderLayout());
 		JLabel panel = new JLabel(new ImageIcon("D:\\Student Data\\Pictures\\Saved Pictures\\child.jpg"));
 
-      	// IP Text Field
+      		// IP Text Field
 		JTextField ipTF = new JTextField();
 		ipTF.setBounds(30, 10, 190, 25);
 
@@ -148,12 +147,12 @@ public class snmpPanel {
 		JButton writeButt = new JButton();
 		writeButt.setText("Write info");
 		writeButt.setBounds(10, 40, 100, 50);
-        writeButt.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent event) {
-            	System.out.println(event.getActionCommand());
+        	writeButt.addActionListener(new ActionListener() {
+        		public void actionPerformed(ActionEvent event) {
+            			System.out.println(event.getActionCommand());
 				ipTA.append(event.getActionCommand() + '\n');
-         	}
-        });
+         		}
+        	});
 
 		// read Button
 		JButton readButt = new JButton();
@@ -171,10 +170,10 @@ public class snmpPanel {
 		close.setText("Exit");
 		close.setBounds(10, 410, 100, 50);
 		close.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent event) {
-            	System.exit(0);
-         	}
-      	});
+        		public void actionPerformed(ActionEvent event) {
+	            	System.exit(0);
+         		}
+      		});
 
 		// Set SNMP Radio
 		JRadioButton writeRadio = new JRadioButton("Write", true);
