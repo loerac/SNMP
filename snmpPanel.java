@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.event.ResponseEvent;
@@ -128,40 +129,60 @@ public class snmpPanel {
 		frame.setLayout(new BorderLayout());
 		JLabel panel = new JLabel(new ImageIcon("D:\\Student Data\\Pictures\\Saved Pictures\\child.jpg"));
 
-      		// IP Text Field
-		JTextField ipTF = new JTextField();
-		ipTF.setBounds(30, 10, 190, 25);
+		// Host Label
+		JLabel hostLabel = new JLabel();
+		hostLabel.setText("Host Address: ");
+		hostLabel.setLocation(10, -15);
+		hostLabel.setSize(90, 50);
 
-		// IP Label
-		JLabel ipLabel = new JLabel();
-		ipLabel.setText("IP: ");
-		ipLabel.setLocation(10, 0);
-		ipLabel.setSize(50, 50);
-        
+		// Host text field
+		JTextField hostTF = new JTextField();
+		hostTF.setBounds(10, 20, 110, 20);
+
+		// Community label
+		JLabel commLabel = new JLabel();
+		commLabel.setText("Community ID:");
+		commLabel.setLocation(140, -15);
+		commLabel.setSize(90, 50);
+	
+		// Community text field
+		JTextField commTF = new JTextField();
+		commTF.setBounds(140, 20, 110, 20);
+
+		// Object ID label
+		JLabel oidLabel = new JLabel();
+		oidLabel.setText("Object ID:");
+		oidLabel.setLocation(270, -15);
+		oidLabel.setSize(90, 50);
+
+		// Object ID text field
+		JTextField oidTF = new JTextField();
+		oidTF.setBounds(270, 20, 110, 20);
+ 
 		// IP Text Area
 		JTextArea ipTA = new JTextArea();
-		ipTA.setBounds(430, 10, 300, 450);
+		ipTA.setBounds(430, 20, 300, 450);
 		ipTA.setEditable(false);
 
-		// write Button
+		// write Button a.k.a. snmpSet(strAdr, comm, strOID, value)
 		JButton writeButt = new JButton();
-		writeButt.setText("Write info");
-		writeButt.setBounds(10, 40, 100, 50);
-        	writeButt.addActionListener(new ActionListener() {
-        		public void actionPerformed(ActionEvent event) {
-            			System.out.println(event.getActionCommand());
-				ipTA.append(event.getActionCommand() + '\n');
-         		}
-        	});
+		writeButt.setText("Read-Write info");
+		writeButt.setBounds(10, 60, 125, 50);
+        writeButt.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent event) {
+           		System.out.println("Writing: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + ' ' + 2 + '\n');
+				ipTA.append("\tWriting:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n Value: " + 2 + "\n==============================\n");
+        	}
+        });
 
-		// read Button
+		// read Button a.k.a. snmpGet(strAdr, comm, strOID)
 		JButton readButt = new JButton();
-		readButt.setText("Read info");
-		readButt.setBounds(120, 40, 100, 50);
+		readButt.setText("Read-only info");
+		readButt.setBounds(145, 60, 125, 50);
 		readButt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				System.out.println(event.getActionCommand());
-				ipTA.append(event.getActionCommand() + '\n');
+				System.out.println("Reading: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + '\n');
+				ipTA.append("\tReading:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n==============================\n");
 			}
 		});
  
@@ -188,8 +209,12 @@ public class snmpPanel {
 
 		//JPanel panel = new JPanel();
 		panel.setLayout(null);
-		panel.add(ipTF);
-		panel.add(ipLabel);
+		panel.add(hostLabel);
+		panel.add(hostTF);
+		panel.add(commLabel);
+		panel.add(commTF);
+		panel.add(oidLabel);
+		panel.add(oidTF);
 		panel.add(writeButt);
 		panel.add(readButt);
 		panel.add(close);
