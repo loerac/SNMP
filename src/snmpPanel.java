@@ -20,7 +20,7 @@ public class snmpPanel {
 	// Variables for the SNMP	
 	public static final String READ_COMMUNITY = "public";
 	public static final String WRITE_COMMUNITY = "public";
-   public static final String temp = ".1.3.6.1.2.1.1.5.0";
+	public static final String temp = ".1.3.6.1.2.1.1.5.0";
 	public static final String OID_UPS_OUTLET_GROUP1 = temp;
 	public static final String OID_UPS_BATTERY_CAPACITY = temp;
    
@@ -31,20 +31,20 @@ public class snmpPanel {
 			snmpPanel objSNMP = new snmpPanel();
 
 			// Get Basic state of UPS
-         System.out.println("======================================");
+			System.out.println("======================================");
 			String batteryCap = objSNMP.snmpGet(strIPAddress, READ_COMMUNITY, OID_UPS_BATTERY_CAPACITY);
-         System.out.println(batteryCap);
+			System.out.println(batteryCap);
 
-         System.out.println("======================================");
-         // Set Value = 2 to turn OFF UPS OUTLET Group1
+			System.out.println("======================================");
+			// Set Value = 2 to turn OFF UPS OUTLET Group1
 			// Set Value = 1 to turn ON  UPS OUTLET Group1
 			String value = "Banana";
-         objSNMP.snmpSet(strIPAddress, WRITE_COMMUNITY, OID_UPS_OUTLET_GROUP1, value);
-         System.out.println("======================================");
-         
-         batteryCap = objSNMP.snmpGet(strIPAddress, READ_COMMUNITY, OID_UPS_BATTERY_CAPACITY);
-         System.out.println(batteryCap);
-         System.out.println("======================================");
+			objSNMP.snmpSet(strIPAddress, WRITE_COMMUNITY, OID_UPS_OUTLET_GROUP1, value);
+			System.out.println("======================================");
+       
+			batteryCap = objSNMP.snmpGet(strIPAddress, READ_COMMUNITY, OID_UPS_BATTERY_CAPACITY);
+			System.out.println(batteryCap);
+			System.out.println("======================================");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}*/
@@ -55,7 +55,7 @@ public class snmpPanel {
 	* This method is very useful to set a parameter on remote device
 	*/
 	public String snmpSet(String strAddress, String community, String strOID, String value) {
-      String response = "SNMP set request = FAILED";
+		String response = "SNMP set request = FAILED";
 		Address targetAddress = GenericAddress.parse(strAddress + "/161");
 		try {
 			TransportMapping transport = new DefaultUdpTransportMapping();
@@ -64,33 +64,31 @@ public class snmpPanel {
 			CommunityTarget target = new CommunityTarget();
 			target.setCommunity(new OctetString(community));
 			target.setVersion(SnmpConstants.version1);
-         target.setAddress(targetAddress);
+			target.setAddress(targetAddress);
 			target.setRetries(2);
 			target.setTimeout(5000);
          
 			PDU pdu = new PDU();
-         OID oid = new OID(strOID);
-         Variable var = new OctetString(value);
-         VariableBinding varBind = new VariableBinding(oid, var);
-			pdu.add(varBind);
-         pdu.setType(PDU.SET);
-         pdu.setRequestID(new Integer32(1));
+			//OID oid = new OID(strOID);
+			//Variable var = new OctetString(value);
+			//VariableBinding varBind = new VariableBinding(oid, var);
+			pdu.add(new VariableBinding(new OID(strOID), new OctetString(value)));
+			pdu.setType(PDU.SET);
+			pdu.setRequestID(new Integer32(1));
          
 			Snmp snmp = new Snmp(transport);
-         snmp.send(pdu, target, null);
-         ResponseEvent event = snmp.set(pdu, target);
-         if(event != null) {
-            System.out.println("SNMP set request = " + event.getRequest().getVariableBindings());
-            response = "SNMP set request = " + event.getRequest().getVariableBindings() + '\n';
-      	   PDU strResponse = event.getResponse();
-            System.out.println("Response = " + strResponse);
-            response += "Response = " + strResponse + '\n';
-      	   if(strResponse != null) {
-               String result = strResponse.getErrorStatusText();
-               System.out.println("Set status is: " + result);
-               response += "Set status is: " + result + '\n';
-            }
-   	   }
+			ResponseEvent event = snmp.set(pdu, target);
+			if(event != null) {
+				response = "SNMP set request = " + event.getRequest().getVariableBindings() + '\n';
+				PDU strResponse = event.getResponse();
+				response += "Response = " + strResponse + '\n';
+				
+				if(strResponse != null) {
+					String result = strResponse.getErrorStatusText();
+					response += "Set status is: " + result + '\n';
+					//System.out.println(response);
+				}
+			}
 			snmp.close();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -102,8 +100,8 @@ public class snmpPanel {
 	* SNMPGet method return response for given OID from the Device
 	*/
 	public String snmpGet(String strAddress, String comm, String strOID) {
-      String str = "FAILED";
-      String length="NULL";
+		String str = "FAILED";
+		String length="NULL";
 		try {
 			strAddress = strAddress + "/161";
 			Address targetaddress = new UdpAddress(strAddress);
@@ -118,8 +116,8 @@ public class snmpPanel {
 			comtarget.setTimeout(5000);
          
 			PDU pdu = new PDU();
-  			pdu.add(new VariableBinding(new OID(strOID)));
-         pdu.setRequestID(new Integer32(1));
+			pdu.add(new VariableBinding(new OID(strOID)));
+			pdu.setRequestID(new Integer32(1));
 			pdu.setType(PDU.GETNEXT);
          
 			Snmp snmp = new Snmp(transport);
@@ -127,24 +125,27 @@ public class snmpPanel {
          
 			if(response != null) {
 				if(response.getResponse().getErrorStatusText().equalsIgnoreCase("Success")) {
-               str = "SUCCESS";
-					PDU pduresponse=response.getResponse();
-					length = pduresponse.getVariableBindings().firstElement().toString();
-					if(length.contains("=")) {
-						int len = length.indexOf("=");
-						length=length.substring(len+1, length.length());
-					} else
-						str = "no data";
+				str = "SUCCESS";
+				PDU pduresponse=response.getResponse();
+				length = pduresponse.getVariableBindings().firstElement().toString();
+				
+				if(length.contains("=")) {
+					int len = length.indexOf("=");
+					length=length.substring(len+1, length.length());
 				} else
-					System.out.println("response failed");
+					str = "no data";
+				} else {
+					str = "FAILED: Response = NULL\n";
+					//System.out.println(str);
+					return str;
+				}
 			} else
 				System.out.println("Feeling like a TimeOut occured ");
-            
-			snmp.close();
+				snmp.close();
 		} catch(Exception e) { e.printStackTrace(); }
 		str = "Address: " + strAddress + '\n' + str + ": response = " + length + '\n';
 		return str;
-   }
+	}
 	
 	public static void controlPanel() {
 		snmpPanel obj = new snmpPanel();	
@@ -159,7 +160,7 @@ public class snmpPanel {
 		// Host Label
 		JLabel hostLabel = new JLabel();
 		hostLabel.setText("Host Address: ");
-      hostLabel.setForeground(Color.white);
+		hostLabel.setForeground(Color.white);
 		hostLabel.setLocation(10, -15);
 		hostLabel.setSize(90, 50);
 
@@ -170,7 +171,7 @@ public class snmpPanel {
 		// Community label
 		JLabel commLabel = new JLabel();
 		commLabel.setText("Community ID:");
-      commLabel.setForeground(Color.white);
+		commLabel.setForeground(Color.white);
 		commLabel.setLocation(130, -15);
 		commLabel.setSize(90, 50);
 	
@@ -181,7 +182,7 @@ public class snmpPanel {
 		// Object ID label
 		JLabel oidLabel = new JLabel();
 		oidLabel.setText("Object ID:");
-      oidLabel.setForeground(Color.white);
+		oidLabel.setForeground(Color.white);
 		oidLabel.setLocation(250, -15);
 		oidLabel.setSize(90, 50);
 
@@ -192,7 +193,7 @@ public class snmpPanel {
 		// Value label
 		JLabel valueLabel = new JLabel();
 		valueLabel.setText("Value:");
-      valueLabel.setForeground(Color.white);
+		valueLabel.setForeground(Color.white);
 		valueLabel.setLocation(370, -15);
 		valueLabel.setSize(90, 50);
 
@@ -203,22 +204,22 @@ public class snmpPanel {
 		// IP Text Area
 		JTextArea ipTA = new JTextArea();
 		ipTA.setEditable(false);
-      JScrollPane scroll = new JScrollPane(ipTA);
-      scroll.setBounds(10, 290, 725, 140);
-      scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-      scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+		JScrollPane scroll = new JScrollPane(ipTA);
+		scroll.setBounds(10, 290, 725, 140);
+		scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 
 		// write Button a.k.a. snmpSet(strAdr, comm, strOID, value)
 		JButton writeButt = new JButton();
 		writeButt.setText("Write/Set info");
 		writeButt.setBounds(10, 60, 125, 50);
-        writeButt.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent event) {
+		writeButt.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
 				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals("")) && (!valueTF.getText().equals(""))) {
-   				ipTA.append("=============== Writing ===============\n" + obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
-            }
-        	}
-        });
+					ipTA.append("=============== Writing ===============\n" + obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
+				}
+			}
+		});
 
 		// read Button a.k.a. snmpGet(strAdr, comm, strOID)
 		JButton readButt = new JButton();
@@ -227,8 +228,8 @@ public class snmpPanel {
 		readButt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals(""))) {
-               ipTA.append("================== Read ==================\n" + obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()) + '\n');
-            }
+					ipTA.append("================== Read ==================\n" + obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()) + '\n');
+				}
 			}
 		});
  
@@ -237,21 +238,10 @@ public class snmpPanel {
 		close.setText("Exit");
 		close.setBounds(280, 60, 100, 50);
 		close.addActionListener(new ActionListener() {
-        		public void actionPerformed(ActionEvent event) {
-	            	System.exit(0);
-         		}
-      		});
-
-		// Set SNMP Radio
-		JRadioButton writeRadio = new JRadioButton("Write", true);
-		writeRadio.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				System.out.print(event.getActionCommand());
+				System.exit(0);
 			}
 		});
-
-		ButtonGroup group = new ButtonGroup();
-		group.add(writeRadio);
 
 		//JPanel panel = new JPanel();
 		panel.setLayout(null);
@@ -267,9 +257,8 @@ public class snmpPanel {
 		panel.add(readButt);
 		panel.add(close);
 		panel.add(scroll);
-
 		frame.add(panel);
 		frame.setResizable(false);
 		frame.setVisible(true);
-   }
+	}
 }
