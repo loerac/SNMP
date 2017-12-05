@@ -142,7 +142,7 @@ public class snmpPanel {
             
 			snmp.close();
 		} catch(Exception e) { e.printStackTrace(); }
-		str = "Address: " + strAddress + '\n' + str + ": response = " + length;
+		str = "Address: " + strAddress + '\n' + str + ": response = " + length + '\n';
 		return str;
    }
 	
@@ -154,11 +154,12 @@ public class snmpPanel {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
      
 		frame.setLayout(new BorderLayout());
-		JLabel panel = new JLabel(new ImageIcon("child.jpg"));
+		JLabel panel = new JLabel(new ImageIcon("plz_no_crash.jpg"));
 
 		// Host Label
 		JLabel hostLabel = new JLabel();
 		hostLabel.setText("Host Address: ");
+      hostLabel.setForeground(Color.white);
 		hostLabel.setLocation(10, -15);
 		hostLabel.setSize(90, 50);
 
@@ -169,6 +170,7 @@ public class snmpPanel {
 		// Community label
 		JLabel commLabel = new JLabel();
 		commLabel.setText("Community ID:");
+      commLabel.setForeground(Color.white);
 		commLabel.setLocation(130, -15);
 		commLabel.setSize(90, 50);
 	
@@ -179,6 +181,7 @@ public class snmpPanel {
 		// Object ID label
 		JLabel oidLabel = new JLabel();
 		oidLabel.setText("Object ID:");
+      oidLabel.setForeground(Color.white);
 		oidLabel.setLocation(250, -15);
 		oidLabel.setSize(90, 50);
 
@@ -189,17 +192,21 @@ public class snmpPanel {
 		// Value label
 		JLabel valueLabel = new JLabel();
 		valueLabel.setText("Value:");
+      valueLabel.setForeground(Color.white);
 		valueLabel.setLocation(370, -15);
 		valueLabel.setSize(90, 50);
 
 		// Value text field
 		JTextField valueTF = new JTextField();
-		valueTF.setBounds(370, 20, 50, 20);
+		valueTF.setBounds(370, 20, 110, 20);
  
 		// IP Text Area
 		JTextArea ipTA = new JTextArea();
-		ipTA.setBounds(435, 10, 300, 455);
 		ipTA.setEditable(false);
+      JScrollPane scroll = new JScrollPane(ipTA);
+      scroll.setBounds(10, 290, 725, 140);
+      scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+      scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 
 		// write Button a.k.a. snmpSet(strAdr, comm, strOID, value)
 		JButton writeButt = new JButton();
@@ -207,10 +214,8 @@ public class snmpPanel {
 		writeButt.setBounds(10, 60, 125, 50);
         writeButt.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent event) {
-            //System.out.println("Writing: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + ' ' + 2 + '\n');
-				//ipTA.append("\tWriting:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n Value: " + valueTF.getText() + "\n==============================\n");
 				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals("")) && (!valueTF.getText().equals(""))) {
-   				ipTA.append("\tWriting:\n" + obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
+   				ipTA.append("=============== Writing ===============\n" + obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
             }
         	}
         });
@@ -221,10 +226,8 @@ public class snmpPanel {
 		readButt.setBounds(145, 60, 125, 50);
 		readButt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				//System.out.println("Reading: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + '\n');
-				//ipTA.append("\tReading:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n==============================\n");
 				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals(""))) {
-               ipTA.append("\tRead:\n" + obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()) + '\n');
+               ipTA.append("================== Read ==================\n" + obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()) + '\n');
             }
 			}
 		});
@@ -232,7 +235,7 @@ public class snmpPanel {
 		// Close button
 		JButton close = new JButton();
 		close.setText("Exit");
-		close.setBounds(10, 410, 100, 50);
+		close.setBounds(280, 60, 100, 50);
 		close.addActionListener(new ActionListener() {
         		public void actionPerformed(ActionEvent event) {
 	            	System.exit(0);
@@ -263,7 +266,7 @@ public class snmpPanel {
 		panel.add(writeButt);
 		panel.add(readButt);
 		panel.add(close);
-		panel.add(ipTA);
+		panel.add(scroll);
 
 		frame.add(panel);
 		frame.setResizable(false);
