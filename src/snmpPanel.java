@@ -19,9 +19,10 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 public class snmpPanel {
 	// Variables for the SNMP	
 	public static final String READ_COMMUNITY = "public";
-	public static final String WRITE_COMMUNITY = "private";
-	public static final String OID_UPS_OUTLET_GROUP1 = ".1.3.6.1.2.1.25.5.1.1.1.7872";
-	public static final String OID_UPS_BATTERY_CAPACITY = ".1.3.6.1.2.1.25.5.1.1.1.7872";
+	public static final String WRITE_COMMUNITY = "public";
+   public static final String temp = ".1.3.6.1.2.1.1.5.0";
+	public static final String OID_UPS_OUTLET_GROUP1 = temp;
+	public static final String OID_UPS_BATTERY_CAPACITY = temp;
    
 	public static void main(String[] args) {
 		controlPanel();
@@ -29,14 +30,21 @@ public class snmpPanel {
 			String strIPAddress = "127.0.0.1";
 			snmpPanel objSNMP = new snmpPanel();
 
-			// Set Value = 2 to turn OFF UPS OUTLET Group1
-			// Set Value = 1 to turn ON  UPS OUTLET Group1
-			int value = 3;
-			objSNMP.snmpSet(strIPAddress, WRITE_COMMUNITY, OID_UPS_OUTLET_GROUP1, value);
-
 			// Get Basic state of UPS
+         System.out.println("======================================");
 			String batteryCap = objSNMP.snmpGet(strIPAddress, READ_COMMUNITY, OID_UPS_BATTERY_CAPACITY);
          System.out.println(batteryCap);
+
+         System.out.println("======================================");
+         // Set Value = 2 to turn OFF UPS OUTLET Group1
+			// Set Value = 1 to turn ON  UPS OUTLET Group1
+			String value = "Banana";
+         objSNMP.snmpSet(strIPAddress, WRITE_COMMUNITY, OID_UPS_OUTLET_GROUP1, value);
+         System.out.println("======================================");
+         
+         batteryCap = objSNMP.snmpGet(strIPAddress, READ_COMMUNITY, OID_UPS_BATTERY_CAPACITY);
+         System.out.println(batteryCap);
+         System.out.println("======================================");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}*/
@@ -46,36 +54,47 @@ public class snmpPanel {
 	* The following code valid only SNMP version1
 	* This method is very useful to set a parameter on remote device
 	*/
-	public void snmpSet(String strAddress, String community, String strOID, int value) {
-		strAddress= strAddress+"/161"; //changed SNMP_PORT to 161
-		Address targetAddress = GenericAddress.parse(strAddress);
-		Snmp snmp;
+	public String snmpSet(String strAddress, String community, String strOID, String value) {
+      String response = "SNMP set request = FAILED";
+		Address targetAddress = GenericAddress.parse(strAddress + "/161");
 		try {
 			TransportMapping transport = new DefaultUdpTransportMapping();
-			snmp = new Snmp(transport);
 			transport.listen();
+         
 			CommunityTarget target = new CommunityTarget();
 			target.setCommunity(new OctetString(community));
-			target.setAddress(targetAddress);
+			target.setVersion(SnmpConstants.version1);
+         target.setAddress(targetAddress);
 			target.setRetries(2);
 			target.setTimeout(5000);
-			target.setVersion(SnmpConstants.version2c);//changed to version2c was version1
+         
 			PDU pdu = new PDU();
-			pdu.add(new VariableBinding(new OID(strOID), new Integer32(value)));
-			pdu.setType(PDU.SET);
-			ResponseListener listener = new ResponseListener() {
-				public void onResponse(ResponseEvent event) {
-					// Always cancel async request when response has been received otherwise a memory leak is cre  ated!
-					// Not canceling a request immediately can be useful when sending a request to a broadcast address.
-					((Snmp)event.getSource()).cancel(event.getRequest(), this);
-					System.out.println("Set Status is: " + event.getResponse().getErrorStatusText());
-				}
-			};
-			snmp.send(pdu, target, null, listener);
+         OID oid = new OID(strOID);
+         Variable var = new OctetString(value);
+         VariableBinding varBind = new VariableBinding(oid, var);
+			pdu.add(varBind);
+         pdu.setType(PDU.SET);
+         pdu.setRequestID(new Integer32(1));
+         
+			Snmp snmp = new Snmp(transport);
+         snmp.send(pdu, target, null);
+         ResponseEvent event = snmp.set(pdu, target);
+         if(event != null) {
+            System.out.println("SNMP set request = " + event.getRequest().getVariableBindings());
+            response = "SNMP set request = " + event.getRequest().getVariableBindings() + '\n';
+      	   PDU strResponse = event.getResponse();
+            System.out.println("Response = " + strResponse);
+            response += "Response = " + strResponse + '\n';
+      	   if(strResponse != null) {
+               String result = strResponse.getErrorStatusText();
+               System.out.println("Set status is: " + result);
+               response += "Set status is: " + result + '\n';
+            }
+   	   }
 			snmp.close();
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		} return response;
 	}
 
 	/*
@@ -83,49 +102,47 @@ public class snmpPanel {
 	* SNMPGet method return response for given OID from the Device
 	*/
 	public String snmpGet(String strAddress, String comm, String strOID) {
-      String str="";
-      String length="";
+      String str = "FAILED";
+      String length="NULL";
 		try {
-			OctetString Community = new OctetString(comm);
 			strAddress = strAddress + "/161";
 			Address targetaddress = new UdpAddress(strAddress);
 			TransportMapping transport = new DefaultUdpTransportMapping();
 			transport.listen();
+         
 			CommunityTarget comtarget = new CommunityTarget();
-			comtarget.setCommunity(Community);
-			comtarget.setVersion(SnmpConstants.version2c);
+			comtarget.setCommunity(new OctetString(comm));
+			comtarget.setVersion(SnmpConstants.version1);
 			comtarget.setAddress(targetaddress);
 			comtarget.setRetries(2);
 			comtarget.setTimeout(5000);
+         
 			PDU pdu = new PDU();
-			ResponseEvent response;
-			Snmp snmp;
-			pdu.add(new VariableBinding(new OID(strOID)));
-			pdu.setType(PDU.GET);
-			snmp = new Snmp(transport);
-			response = snmp.get(pdu,comtarget);
+  			pdu.add(new VariableBinding(new OID(strOID)));
+         pdu.setRequestID(new Integer32(1));
+			pdu.setType(PDU.GETNEXT);
+         
+			Snmp snmp = new Snmp(transport);
+			ResponseEvent response = snmp.get(pdu,comtarget);
+         
 			if(response != null) {
 				if(response.getResponse().getErrorStatusText().equalsIgnoreCase("Success")) {
-					//System.out.println("sucsess");
-               str = "Success";
+               str = "SUCCESS";
 					PDU pduresponse=response.getResponse();
 					length = pduresponse.getVariableBindings().firstElement().toString();
 					if(length.contains("=")) {
 						int len = length.indexOf("=");
 						length=length.substring(len+1, length.length());
-					} else{
+					} else
 						str = "no data";
-					}
-				} else{
+				} else
 					System.out.println("response failed");
-				}
-			} else {
+			} else
 				System.out.println("Feeling like a TimeOut occured ");
-			}
+            
 			snmp.close();
 		} catch(Exception e) { e.printStackTrace(); }
-		str = "Address: " + strAddress + '\n' + str + ": response = " + length + '\n';
-      //System.out.println(str);
+		str = "Address: " + strAddress + '\n' + str + ": response = " + length;
 		return str;
    }
 	
@@ -186,26 +203,29 @@ public class snmpPanel {
 
 		// write Button a.k.a. snmpSet(strAdr, comm, strOID, value)
 		JButton writeButt = new JButton();
-		writeButt.setText("Set info");
+		writeButt.setText("Write/Set info");
 		writeButt.setBounds(10, 60, 125, 50);
         writeButt.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent event) {
             //System.out.println("Writing: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + ' ' + 2 + '\n');
 				//ipTA.append("\tWriting:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n Value: " + valueTF.getText() + "\n==============================\n");
-            int value = Integer.parseInt(valueTF.getText());
-				obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), value);
+				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals("")) && (!valueTF.getText().equals(""))) {
+   				ipTA.append("\tWriting:\n" + obj.snmpSet(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
+            }
         	}
         });
 
 		// read Button a.k.a. snmpGet(strAdr, comm, strOID)
 		JButton readButt = new JButton();
-		readButt.setText("Write info");
+		readButt.setText("Read/Get info");
 		readButt.setBounds(145, 60, 125, 50);
 		readButt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				//System.out.println("Reading: " + hostTF.getText() + ' ' + commTF.getText() + ' ' + oidTF.getText() + '\n');
 				//ipTA.append("\tReading:\n Host: " + hostTF.getText() + "\n Community: " + commTF.getText() + "\n Object ID: " + oidTF.getText() + "\n==============================\n");
-				ipTA.append(obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()));
+				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals(""))) {
+               ipTA.append("\tRead:\n" + obj.snmpGet(hostTF.getText(), commTF.getText(), oidTF.getText()) + '\n');
+            }
 			}
 		});
  
