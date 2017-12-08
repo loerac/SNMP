@@ -1,9 +1,11 @@
+// Importing tools for error detection and vectors
 import java.net.InetAddress;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.Vector;
 
+// Importing tools for SNMP
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.CommandResponder;
 import org.snmp4j.CommandResponderEvent;
@@ -22,6 +24,7 @@ import org.snmp4j.mp.MPv2c;
 import org.snmp4j.util.MultiThreadedMessageDispatcher;
 import org.snmp4j.util.ThreadPool;
 
+// Importing tools for JFrame
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,56 +32,90 @@ import javax.swing.*;
 import javax.swing.text.DefaultCaret;
 
 public class classSNMP implements CommandResponder {
+	// Creating a textArea to variable
+	// Used for set/get/trap data
 	private static JTextArea ipTA;
-	private int n = 0;
-	private long start = -1;
-	private MultiThreadedMessageDispatcher dispatcher;
-	private Snmp snmp = null;
-	private Address listenAddress;
-	private ThreadPool threadPool;
 
-	public classSNMP() {}
-
+	// Creating a constructor
 	public static void main(String[] args) {
 		new classSNMP().run();
 		controlPanel();
 	}
 
+	// Initiallize the threads
 	private void run() {
 		try {
-			init();
+			ThreadPool threadPool = ThreadPool.create("Trap", 10);
+			MultiThreadedMessageDispatcher dispatcher = new MultiThreadedMessageDispatcher(threadPool, new MessageDispatcherImpl());
+			
+			Address listenAddress = GenericAddress.parse(System.getProperty("snmp4j.listenAddress", "udp:0.0.0.0/162"));
+			TransportMapping<?> transport;
+			if (listenAddress instanceof UdpAddress) {
+				transport = new DefaultUdpTransportMapping((UdpAddress) listenAddress);
+			} else {
+				transport = new DefaultTcpTransportMapping((TcpAddress) listenAddress);
+			}
+			
+			Snmp snmp = new Snmp(dispatcher, transport);
+			snmp.getMessageDispatcher().addMessageProcessingModel(new MPv1());
+			snmp.getMessageDispatcher().addMessageProcessingModel(new MPv2c());
+			snmp.listen();
 			snmp.addCommandResponder(this);
 		} catch (Exception e) { e.printStackTrace(); }
 	}
 
+	// Creating a CommunityTarget function
+	// After writing one, I decided to 
+	// create a function to do it for me
+	// since I have to make one for set and get
 	public static CommunityTarget createCT(String addr, String port, String comm) {
-		CommunityTarget target = new CommunityTarget();
-		target.setCommunity(new OctetString(comm));
-		target.setVersion(SnmpConstants.version2c);
-		target.setAddress(new UdpAddress(addr + "/" + port));
+		CommunityTarget target = new CommunityTarget();		// A object that will be returned
+		target.setCommunity(new OctetString(comm));		// setting the community with comm
+		target.setVersion(SnmpConstants.version2c);		// Setting the type of version (1, 2c, 3)
+		target.setAddress(new UdpAddress(addr + "/" + port));	// Setting the address with the port number to target
 		target.setRetries(2);
 		target.setTimeout(5000);
 		return target;
 	}
+
+	// Creating a PDU function
+	// After writing one, I decided to
+	// create a function to do it for me
+	// since I have to make one for set and get
+	public static PDU createPDU(String oid, String value, int sg) {
+		PDU pdu = new PDU();					// A object that will be returned
+		if(sg == 0) {						// sg stands for set-get, make sg = 0 for get
+			pdu.add(new VariableBinding(new OID(oid)));	// Binding the oid and adding it to the object
+			pdu.setType(PDU.GET);				// Setting the object to PDU.GET
+		}
+		else {							// Make sg != 0 for set
+			pdu.add(new VariableBinding(new OID(oid), new OctetString(value)));	// Binding the oid and value then adding it to the PDU object
+			pdu.setType(PDU.SET);				// Setting the object to PDU.SET
+		}
+		pdu.setRequestID(new Integer32(1));
+		return pdu;
+	}
 	
+	// Function to set a value to a writable OID
 	public String setSNMP(String addr, String comm, String oid, String value) {
+		// Creating a variable to return back to the user
+		// If there is a fault in setting the OID to the new value
+		// Send back this message
 		String resp = "SNMP set request = FAILED";
 		
 		try {
 			TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
 			transport.listen();
 
+			// Creating an CommTar and PDU object
 			CommunityTarget target = createCT(addr, "161", comm);
-			PDU pdu = new PDU();
-			pdu.add(new VariableBinding(new OID(oid), new OctetString(value)));
-			pdu.setType(PDU.SET);
-			pdu.setRequestID(new Integer32(1));
+			PDU pdu = createPDU(oid, value, 1);
 
 			Snmp snmp = new Snmp(transport);
-			ResponseEvent event = snmp.set(pdu, target);
+			ResponseEvent event = snmp.set(pdu, target);	// Setting the snmp with the pdu and target object
 			if(event != null) {
 				resp = "SNMP set request = " + event.getRequest().getVariableBindings() + '\n';
-				PDU pduResp = event.getResponse();
+				PDU pduResp = event.getResponse();	// Setting the new value to the OID
 				resp += "Response = " + pduResp + '\n';
 
 				if(pduResp != null)
@@ -89,31 +126,33 @@ public class classSNMP implements CommandResponder {
 		return resp;
 	}
 	
+	// Function to get a value to a readable OID
 	public String getSNMP(String addr, String comm, String oid) {
+		// Creating variable's to return back
+		// If there is a failure in getting back the information
+		// Send back these values
 		String str = "FAILED";
 		String length = "NULL";
 		try {
 			TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
 			transport.listen();
 
+			// Creating a value for CommTar and PDU
 			CommunityTarget target = createCT(addr, "161", comm);
-			PDU pdu = new PDU();
-			pdu.add(new VariableBinding(new OID(oid)));
-			pdu.setRequestID(new Integer32(1));
-			pdu.setType(PDU.GET);
+			PDU pdu = createPDU(oid, "", 0);
 
 			Snmp snmp = new Snmp(transport);
-			ResponseEvent resp = snmp.get(pdu, target);
+			ResponseEvent resp = snmp.get(pdu, target);	// Getting the information with the PDU and CommTar info
 
 			if(resp != null) {
 				if(resp.getResponse().getErrorStatusText().equalsIgnoreCase("Success")) {
 					str = "SUCCESS";
-					PDU pduResp = resp.getResponse();
-					length = pduResp.getVariableBindings().firstElement().toString();
+					PDU pduResp = resp.getResponse();	// Setting a value to a PDU then
+					length = pduResp.getVariableBindings().firstElement().toString();	// Retrieve it's value
 					
 					if(length.contains("=")) {
 						int len = length.indexOf("=");
-						length = length.substring(len + 1, length.length());
+						length = length.substring(len + 1, length.length());	// Grabbing the value of the OID
 					} else 
 						return "FAILED: Response = NULL\n";
 				} else {
@@ -125,57 +164,43 @@ public class classSNMP implements CommandResponder {
 		return "Address: " + addr + '\n' + str + ": response = " + length + '\n';
 	}
 
-private void init() throws UnknownHostException, IOException {
-		threadPool = ThreadPool.create("Trap", 10);
-		dispatcher = new MultiThreadedMessageDispatcher(threadPool, new MessageDispatcherImpl());
-		listenAddress = GenericAddress.parse(System.getProperty("snmp4j.listenAddress", "udp:0.0.0.0/162"));
-		TransportMapping<?> transport;
-		if (listenAddress instanceof UdpAddress) {
-			transport = new DefaultUdpTransportMapping((UdpAddress) listenAddress);
-		} else {
-			transport = new DefaultTcpTransportMapping((TcpAddress) listenAddress);
-		}
-
-		snmp = new Snmp(dispatcher, transport);
-		snmp.getMessageDispatcher().addMessageProcessingModel(new MPv1());
-		snmp.getMessageDispatcher().addMessageProcessingModel(new MPv2c());
-		snmp.listen();
-	}
-
+	// A function to trap OID's
 	public void processPdu(CommandResponderEvent event) {
-		if (start < 0) {
-			start = System.currentTimeMillis() - 1;
-		}
-		n++;
-		if ((n % 100 == 1)) {
-			//System.out.println("Processed " + (n / (double) (System.currentTimeMillis() - start)) * 1000 + "/s, total=" + n);
-		}
-
-		StringBuffer msg = new StringBuffer();
-		msg.append(event.toString()).append("\n");
+		//StringBuffer msg = new StringBuffer();
+		//msg.append(event.toString());
+		String message = "";// = event.toString();
+		String temp = event.toString();
+		
+		// Creating a VariableBinding vector that will have the trap
 		Vector<? extends VariableBinding> varBinds = event.getPDU().getVariableBindings();
+
+		// If there was a trap caught and added to the vector,
+		// it will then change 
 		if (varBinds != null && !varBinds.isEmpty()) {
 			Iterator<? extends VariableBinding> varIter = varBinds.iterator();
 			while (varIter.hasNext()) {
 				VariableBinding var = varIter.next();
-				msg.append(var.toString()).append("\n");
+				//msg.append(var.toString()).append("\n");
+				temp += var.toString() + "\n";
+			}
+
+			// Making the output the the text area look pretty
+			for(char c : temp.toCharArray()) {
+				if(c == ',' || c == ';')
+					message += "\n";	
+				else
+					message += c;
 			}
 		};
-		String message = "";
-		String temp = msg.toString();
-		for(char c : temp.toCharArray()) {
-			if(c == ',' || c == ';') {
-				message += c + "\n";
-			}
-			message += c;
-		}
 		ipTA.append("================== Trap ==================\nMessage Received: " + message + '\n');
 	}
 
+	// Creating a panel for all the componets in my frame
 	public static void controlPanel() {
 		JFrame frame = new JFrame();
 		frame.setSize(750,500);
 		frame.setTitle("Loera SNMP");
+		frame.setResizable(false);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		classSNMP objSNMP = new classSNMP();
@@ -234,7 +259,7 @@ private void init() throws UnknownHostException, IOException {
 		writeButt.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if((!hostTF.getText().equals("")) && (!commTF.getText().equals("")) && (!oidTF.getText().equals("")) && (!valueTF.getText().equals(""))) {
-					ipTA.append("=============== Writing ===============\n" + objSNMP.setSNMP(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
+					ipTA.append("================== Writing =================\n" + objSNMP.setSNMP(hostTF.getText(), commTF.getText(), oidTF.getText(), valueTF.getText()) + '\n');
 				} else 
 					ipTA.append("=======================================\nERROR: ENTER INFO IN <HOST> <COMMUNITY> <OID> <VALUE>\n\n");
 			}
@@ -262,6 +287,7 @@ private void init() throws UnknownHostException, IOException {
 				hostTF.setText("127.0.0.1");
 				commTF.setText("public");
 				oidTF.setText(".1.3.6.1.2.1.1.5.0");
+				valueTF.setText("Banana");
 			}
 		});
  
